@@ -1,19 +1,17 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const authController_1 = require("../controllers/authController");
+import { Router } from "express";
+import { register, login, logout } from "../controllers/authController";
 //middleware
-const auth_1 = require("../middleware/auth");
-const router = (0, express_1.Router)();
+import { auth } from "../middleware/auth";
+const router = Router();
 //Post Register route
-router.post("/register", authController_1.register);
+router.post("/register", register);
 //Post Login route
-router.post("/login", authController_1.login);
+router.post("/login", login);
 //Post Logout route
-router.post("/logout", auth_1.auth, authController_1.logout);
+router.post("/logout", auth, logout);
 // Get current user route
-router.get("/me", auth_1.auth, (req, res) => {
+router.get("/me", auth, (req, res) => {
     res.json({ user: req.user });
 });
-exports.default = router;
+export default router;
 //# sourceMappingURL=auth.js.map

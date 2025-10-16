@@ -1,9 +1,6 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.errorHandler = exports.AppError = void 0;
-const logger_1 = require("../utils/logger");
+import { logger } from "../utils/logger";
 // Custom error handling middleware giving more information about errors
-class AppError extends Error {
+export class AppError extends Error {
     // Constructor for the AppError class
     constructor(message, statusCode) {
         super(message); // Call the parent class (Error) constructor with the message
@@ -13,20 +10,18 @@ class AppError extends Error {
         Error.captureStackTrace(this, this.constructor); // Capture the stack trace for debugging
     }
 }
-exports.AppError = AppError;
-const errorHandler = (err, req, res, next) => {
+export const errorHandler = (err, req, res, next) => {
     if (err instanceof AppError) {
         return res.status(err.statusCode).json({
             status: err.status,
             message: err.message,
         });
     }
-    logger_1.logger.error("Unexpected error:", err); // Log unexpected errors for debugging
+    logger.error("Unexpected error:", err); // Log unexpected errors for debugging
     // For unexpected errors, send a generic message
     return res.status(500).json({
         status: "error",
         message: "Something went wrong!",
     });
 };
-exports.errorHandler = errorHandler;
 //# sourceMappingURL=errorHandler.js.map

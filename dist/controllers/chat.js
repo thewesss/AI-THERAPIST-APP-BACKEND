@@ -1,20 +1,17 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllChatSessions = exports.getChatHistory = exports.getChatSession = exports.getSessionHistory = exports.sendMessage = exports.createChatSession = void 0;
-const ChatSession_1 = require("../models/ChatSession");
-const generative_ai_1 = require("@google/generative-ai");
-const logger_1 = require("../utils/logger");
-const client_1 = require("../inngest/client");
-const User_1 = require("../models/User");
-const mongoose_1 = require("mongoose");
+import { ChatSession } from "../models/ChatSession";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { logger } from "../utils/logger";
+import { inngest } from "../inngest/client";
+import { User } from "../models/User";
+import { Types } from "mongoose";
 const { v4: uuidv4 } = require("uuid");
 if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not set in .env');
 }
 // Initialize Gemini API
-const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 // Create a new chat session
-const createChatSession = async (req, res) => {
+export const createChatSession = async (req, res) => {
     try {
         // Check if user is authenticated
         if (!req.user || !req.user.id) {
@@ -22,14 +19,14 @@ const createChatSession = async (req, res) => {
                 .status(401)
                 .json({ message: "Unauthorized - User not authenticated" });
         }
-        const userId = new mongoose_1.Types.ObjectId(req.user.id);
-        const user = await User_1.User.findById(userId);
+        const userId = new Types.ObjectId(req.user.id);
+        const user = await User.findById(userId);
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
         // Generate a unique sessionId
         const sessionId = uuidv4();
-        const session = new ChatSession_1.ChatSession({
+        const session = new ChatSession({
             sessionId,
             userId,
             startTime: new Date(),
@@ -43,29 +40,28 @@ const createChatSession = async (req, res) => {
         });
     }
     catch (error) {
-        logger_1.logger.error("Error creating chat session:", error);
+        logger.error("Error creating chat session:", error);
         res.status(500).json({
             message: "Error creating chat session",
             error: error instanceof Error ? error.message : "Unknown error",
         });
     }
 };
-exports.createChatSession = createChatSession;
 // Send a message in the chat session
-const sendMessage = async (req, res) => {
+export const sendMessage = async (req, res) => {
     try {
         const { sessionId } = req.params;
         const { message } = req.body;
-        const userId = new mongoose_1.Types.ObjectId(req.user.id);
-        logger_1.logger.info("Processing message:", { sessionId, message });
+        const userId = new Types.ObjectId(req.user.id);
+        logger.info("Processing message:", { sessionId, message });
         // Find session by sessionId
-        const session = await ChatSession_1.ChatSession.findOne({ sessionId });
+        const session = await ChatSession.findOne({ sessionId });
         if (!session) {
-            logger_1.logger.warn("Session not found:", { sessionId });
+            logger.warn("Session not found:", { sessionId });
             return res.status(404).json({ message: "Session not found" });
         }
         if (session.userId.toString() !== userId.toString()) {
-            logger_1.logger.warn("Unauthorized access attempt:", { sessionId, userId });
+            logger.warn("Unauthorized access attempt:", { sessionId, userId });
             return res.status(403).json({ message: "Unauthorized" });
         }
         // Create Inngest event for message processing
@@ -94,9 +90,9 @@ const sendMessage = async (req, res) => {
         5. Guide users toward their therapeutic goals`,
             },
         };
-        logger_1.logger.info("Sending message to Inngest:", { event });
+        logger.info("Sending message to Inngest:", { event });
         // Send event to Inngest for logging and analytics
-        await client_1.inngest.send(event);
+        await inngest.send(event);
         // Process the message directly using Gemini
         const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
         // Analyze the message
@@ -121,7 +117,7 @@ const sendMessage = async (req, res) => {
             .replace(/```json\n|\n```/g, "")
             .trim();
         const analysis = JSON.parse(cleanAnalysisText);
-        logger_1.logger.info("Message analysis:", analysis);
+        logger.info("Message analysis:", analysis);
         // Generate therapeutic response
         const responsePrompt = `${event.data.systemPrompt}
     
@@ -139,7 +135,7 @@ const sendMessage = async (req, res) => {
     5. Considers safety and well-being`;
         const responseResult = await model.generateContent(responsePrompt);
         const response = responseResult.response.text().trim();
-        logger_1.logger.info("Generated response:", response);
+        logger.info("Generated response:", response);
         // Add message to session history
         session.messages.push({
             role: "user",
@@ -160,7 +156,7 @@ const sendMessage = async (req, res) => {
         });
         // Save the updated session
         await session.save();
-        logger_1.logger.info("Session updated successfully:", { sessionId });
+        logger.info("Session updated successfully:", { sessionId });
         // Return the response
         res.json({
             response,
@@ -175,20 +171,19 @@ const sendMessage = async (req, res) => {
         });
     }
     catch (error) {
-        logger_1.logger.error("Error in sendMessage:", error);
+        logger.error("Error in sendMessage:", error);
         res.status(500).json({
             message: "Error processing message",
             error: error instanceof Error ? error.message : "Unknown error",
         });
     }
 };
-exports.sendMessage = sendMessage;
 // Get chat session history
-const getSessionHistory = async (req, res) => {
+export const getSessionHistory = async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const userId = new mongoose_1.Types.ObjectId(req.user.id);
-        const session = (await ChatSession_1.ChatSession.findById(sessionId).exec());
+        const userId = new Types.ObjectId(req.user.id);
+        const session = (await ChatSession.findById(sessionId).exec());
         if (!session) {
             return res.status(404).json({ message: "Session not found" });
         }
@@ -202,35 +197,33 @@ const getSessionHistory = async (req, res) => {
         });
     }
     catch (error) {
-        logger_1.logger.error("Error fetching session history:", error);
+        logger.error("Error fetching session history:", error);
         res.status(500).json({ message: "Error fetching session history" });
     }
 };
-exports.getSessionHistory = getSessionHistory;
-const getChatSession = async (req, res) => {
+export const getChatSession = async (req, res) => {
     try {
         const { sessionId } = req.params;
-        logger_1.logger.info(`Getting chat session: ${sessionId}`);
-        const chatSession = await ChatSession_1.ChatSession.findOne({ sessionId });
+        logger.info(`Getting chat session: ${sessionId}`);
+        const chatSession = await ChatSession.findOne({ sessionId });
         if (!chatSession) {
-            logger_1.logger.warn(`Chat session not found: ${sessionId}`);
+            logger.warn(`Chat session not found: ${sessionId}`);
             return res.status(404).json({ error: "Chat session not found" });
         }
-        logger_1.logger.info(`Found chat session: ${sessionId}`);
+        logger.info(`Found chat session: ${sessionId}`);
         res.json(chatSession);
     }
     catch (error) {
-        logger_1.logger.error("Failed to get chat session:", error);
+        logger.error("Failed to get chat session:", error);
         res.status(500).json({ error: "Failed to get chat session" });
     }
 };
-exports.getChatSession = getChatSession;
-const getChatHistory = async (req, res) => {
+export const getChatHistory = async (req, res) => {
     try {
         const { sessionId } = req.params;
-        const userId = new mongoose_1.Types.ObjectId(req.user.id);
+        const userId = new Types.ObjectId(req.user.id);
         // Find session by sessionId instead of _id
-        const session = await ChatSession_1.ChatSession.findOne({ sessionId });
+        const session = await ChatSession.findOne({ sessionId });
         if (!session) {
             return res.status(404).json({ message: "Session not found" });
         }
@@ -240,27 +233,25 @@ const getChatHistory = async (req, res) => {
         res.json(session.messages);
     }
     catch (error) {
-        logger_1.logger.error("Error fetching chat history:", error);
+        logger.error("Error fetching chat history:", error);
         res.status(500).json({ message: "Error fetching chat history" });
     }
 };
-exports.getChatHistory = getChatHistory;
-const getAllChatSessions = async (req, res) => {
+export const getAllChatSessions = async (req, res) => {
     try {
         if (!req.user || !req.user.id) {
             return res.status(401).json({ message: "Unauthorized" });
         }
-        const userId = new mongoose_1.Types.ObjectId(req.user.id);
-        const sessions = await ChatSession_1.ChatSession.find({ userId }).sort({ startTime: -1 });
+        const userId = new Types.ObjectId(req.user.id);
+        const sessions = await ChatSession.find({ userId }).sort({ startTime: -1 });
         res.json(sessions);
     }
     catch (error) {
-        logger_1.logger.error("Error fetching all chat sessions:", error);
+        logger.error("Error fetching all chat sessions:", error);
         res.status(500).json({
             message: "Error fetching all chat sessions",
             error: error instanceof Error ? error.message : "Unknown error",
         });
     }
 };
-exports.getAllChatSessions = getAllChatSessions;
 //# sourceMappingURL=chat.js.map

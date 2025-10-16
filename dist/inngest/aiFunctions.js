@@ -1,16 +1,13 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.functions = exports.generateActivityRecommendations = exports.analyzeTherapySession = exports.processChatMessage = void 0;
-const logger_1 = require("../utils/logger");
-const client_1 = require("./client");
-const generative_ai_1 = require("@google/generative-ai");
-require("dotenv/config");
+import { logger } from "../utils/logger";
+import { inngest } from "./client";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import 'dotenv/config';
 if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not set in .env');
 }
-const genAI = new generative_ai_1.GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 //handles and analyzes incoming chat messages
-exports.processChatMessage = client_1.inngest.createFunction({
+export const processChatMessage = inngest.createFunction({
     id: "process-chat-message",
 }, { event: "therapy/session.message" }, async ({ event, step }) => {
     try {
@@ -25,7 +22,7 @@ exports.processChatMessage = client_1.inngest.createFunction({
                 currentTechnique: null,
             },
         }, goals = [], systemPrompt, } = event.data;
-        logger_1.logger.info("Processing chat message:", { message, historyLength: history.length });
+        logger.info("Processing chat message:", { message, historyLength: history.length });
         //Analyzes the message using gemini
         const analysis = await step.run("analyze-message", async () => {
             try {
@@ -45,15 +42,15 @@ exports.processChatMessage = client_1.inngest.createFunction({
                 const result = await model.generateContent(prompt);
                 const response = await result.response;
                 const text = response.text().trim();
-                logger_1.logger.info("Received analysis from Gemini:", { text });
+                logger.info("Received analysis from Gemini:", { text });
                 // Clean the response text to ensure it's valid JSON
                 const cleanText = text.replace(/```json\n|\n```/g, "").trim();
                 const parsedAnalysis = JSON.parse(cleanText);
-                logger_1.logger.info("Successfully parsed analysis:", parsedAnalysis);
+                logger.info("Successfully parsed analysis:", parsedAnalysis);
                 return parsedAnalysis;
             }
             catch (error) {
-                logger_1.logger.error("Error in message analysis:", { error, message });
+                logger.error("Error in message analysis:", { error, message });
                 // Return a default analysis instead of throwing
                 return {
                     emotionalState: "neutral",
@@ -80,7 +77,7 @@ exports.processChatMessage = client_1.inngest.createFunction({
         //Triggers a risk alert if the risk level is high
         if (analysis.riskLevel > 4) {
             await step.run("trigger-risk-alert", async () => {
-                logger_1.logger.warn("High risk level detected in chat message", {
+                logger.warn("High risk level detected in chat message", {
                     message,
                     riskLevel: analysis.riskLevel,
                 });
@@ -106,11 +103,11 @@ exports.processChatMessage = client_1.inngest.createFunction({
                 5. Considers safety and well-being`;
                 const result = await model.generateContent(prompt);
                 const responseText = result.response.text().trim();
-                logger_1.logger.info("Generated response:", { responseText });
+                logger.info("Generated response:", { responseText });
                 return responseText;
             }
             catch (error) {
-                logger_1.logger.error("Error generating response:", { error, message });
+                logger.error("Error generating response:", { error, message });
                 // Return a default response instead of throwing
                 return "I'm here to support you. Could you tell me more about what's on your mind?";
             }
@@ -124,7 +121,7 @@ exports.processChatMessage = client_1.inngest.createFunction({
     }
     catch (error) {
         // Log the error
-        logger_1.logger.error("Error in chat message processing:", {
+        logger.error("Error in chat message processing:", {
             error,
             message: event.data.message,
         });
@@ -142,7 +139,7 @@ exports.processChatMessage = client_1.inngest.createFunction({
         };
     }
 });
-exports.analyzeTherapySession = client_1.inngest.createFunction({
+export const analyzeTherapySession = inngest.createFunction({
     id: "analyze-therapy-session",
 }, { event: "therapy/session.created" }, async ({ event, step }) => {
     try {
@@ -171,13 +168,13 @@ exports.analyzeTherapySession = client_1.inngest.createFunction({
         // Store the analysis
         await step.run("store-analysis", async () => {
             // Here you would typically store the analysis in your database
-            logger_1.logger.info("Session analysis stored successfully");
+            logger.info("Session analysis stored successfully");
             return analysis;
         });
         // If there are concerning indicators, trigger an alert
         if (analysis.areasOfConcern?.length > 0) {
             await step.run("trigger-concern-alert", async () => {
-                logger_1.logger.warn("Concerning indicators detected in session analysis", {
+                logger.warn("Concerning indicators detected in session analysis", {
                     sessionId: event.data.sessionId,
                     concerns: analysis.areasOfConcern,
                 });
@@ -190,12 +187,12 @@ exports.analyzeTherapySession = client_1.inngest.createFunction({
         };
     }
     catch (error) {
-        logger_1.logger.error("Error in therapy session analysis:", error);
+        logger.error("Error in therapy session analysis:", error);
         throw error;
     }
 });
 // Function to generate personalized activity recommendations
-exports.generateActivityRecommendations = client_1.inngest.createFunction({ id: "generate-activity-recommendations" }, { event: "mood/updated" }, async ({ event, step }) => {
+export const generateActivityRecommendations = inngest.createFunction({ id: "generate-activity-recommendations" }, { event: "mood/updated" }, async ({ event, step }) => {
     try {
         // Get user's mood history and activity history
         const userContext = await step.run("get-user-context", async () => {
@@ -228,7 +225,7 @@ exports.generateActivityRecommendations = client_1.inngest.createFunction({ id: 
         // Store the recommendations
         await step.run("store-recommendations", async () => {
             // Here you would typically store the recommendations in your database
-            logger_1.logger.info("Activity recommendations stored successfully");
+            logger.info("Activity recommendations stored successfully");
             return recommendations;
         });
         return {
@@ -237,14 +234,14 @@ exports.generateActivityRecommendations = client_1.inngest.createFunction({ id: 
         };
     }
     catch (error) {
-        logger_1.logger.error("Error generating activity recommendations:", error);
+        logger.error("Error generating activity recommendations:", error);
         throw error;
     }
 });
 // Add the functions to the exported array
-exports.functions = [
-    exports.processChatMessage,
-    exports.analyzeTherapySession,
-    exports.generateActivityRecommendations,
+export const functions = [
+    processChatMessage,
+    analyzeTherapySession,
+    generateActivityRecommendations,
 ];
 //# sourceMappingURL=aiFunctions.js.map

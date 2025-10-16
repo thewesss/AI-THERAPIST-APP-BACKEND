@@ -1,11 +1,8 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getTodayActivities = exports.logActivity = void 0;
-const Activity_1 = require("../models/Activity");
-const logger_1 = require("../utils/logger");
+import { Activity } from "../models/Activity";
+import { logger } from "../utils/logger";
 // Allowed enum values from your schema
 const allowedTypes = ["meditation", "exercise", "walking", "reading", "journaling", "therapy"];
-const logActivity = async (req, res, next) => {
+export const logActivity = async (req, res, next) => {
     try {
         const { type, name, description, duration, difficulty, feedback } = req.body;
         const userId = req.user?._id;
@@ -23,7 +20,7 @@ const logActivity = async (req, res, next) => {
         if (isNaN(durationNumber)) {
             return res.status(400).json({ message: "Duration must be a number in minutes" });
         }
-        const activity = new Activity_1.Activity({
+        const activity = new Activity({
             userId, // set userId
             type,
             name,
@@ -34,19 +31,18 @@ const logActivity = async (req, res, next) => {
             timestamp: new Date(),
         });
         await activity.save();
-        logger_1.logger.info(`Activity logged for user: ${userId}`);
+        logger.info(`Activity logged for user: ${userId}`);
         res.status(201).json({
             success: true,
             data: activity,
         });
     }
     catch (error) {
-        logger_1.logger.error("Error logging activity:", error);
+        logger.error("Error logging activity:", error);
         next(error);
     }
 };
-exports.logActivity = logActivity;
-const getTodayActivities = async (req, res, next) => {
+export const getTodayActivities = async (req, res, next) => {
     try {
         const userId = req.user?._id;
         if (!userId) {
@@ -56,16 +52,15 @@ const getTodayActivities = async (req, res, next) => {
         startOfDay.setHours(0, 0, 0, 0);
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
-        const activities = await Activity_1.Activity.find({
+        const activities = await Activity.find({
             userId,
             timestamp: { $gte: startOfDay, $lte: endOfDay },
         }).sort({ timestamp: -1 });
         res.status(200).json({ success: true, data: activities });
     }
     catch (error) {
-        logger_1.logger.error("Error fetching today's activities:", error);
+        logger.error("Error fetching today's activities:", error);
         next(error);
     }
 };
-exports.getTodayActivities = getTodayActivities;
 //# sourceMappingURL=activityController.js.map

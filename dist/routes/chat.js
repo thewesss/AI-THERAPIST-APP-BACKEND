@@ -1,17 +1,13 @@
-"use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = __importDefault(require("express"));
-const chat_1 = require("../controllers/chat");
-const auth_1 = require("../middleware/auth");
-const router = express_1.default.Router();
-router.use(auth_1.auth);
-router.post("/sessions", chat_1.createChatSession);
-router.get("/sessions", chat_1.getAllChatSessions);
-router.get("/sessions/:sessionId", chat_1.getChatSession);
-router.post("/sessions/:sessionId/messages", chat_1.sendMessage);
-router.get("/sessions/:sessionId/history", chat_1.getChatHistory);
-exports.default = router;
+import express from "express";
+import { sendMessage, getChatSession, getChatHistory, createChatSession, getAllChatSessions // add this
+ } from "../controllers/chat";
+import { auth } from "../middleware/auth";
+const router = express.Router();
+router.use(auth);
+router.post("/sessions", createChatSession);
+router.get("/sessions", getAllChatSessions);
+router.get("/sessions/:sessionId", getChatSession);
+router.post("/sessions/:sessionId/messages", sendMessage);
+router.get("/sessions/:sessionId/history", getChatHistory);
+export default router;
 //# sourceMappingURL=chat.js.map
