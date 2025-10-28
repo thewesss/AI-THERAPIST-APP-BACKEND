@@ -15,9 +15,11 @@ import { errorHandler } from "./middleware/errorHandler";
 import chatRouter from "./routes/chat";
 import moodRouter from "./routes/mood";
 import activityRouter from "./routes/activity";
+//
 if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not set in .env');
 }
+//
 // Create an Express application
 const app = express();
 // Middleware setup
