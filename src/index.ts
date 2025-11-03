@@ -26,7 +26,7 @@ if (!process.env.GEMINI_API_KEY) {
 // Create an Express application
 const app = express();
 
-
+//
 // Middleware setup
 app.use(cors())// Allow cross-origin requests
 app.use(helmet())// Secure HTTP headers
