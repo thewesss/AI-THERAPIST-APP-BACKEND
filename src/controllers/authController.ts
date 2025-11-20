@@ -1,28 +1,34 @@
 import { Request, Response } from "express";
 import { User } from "../models/User";
 import { Session } from "../models/Session";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs"; // CHANGED: Using bcryptjs to prevent Linux crashes
 import jwt from "jsonwebtoken";
 import { logger } from "../utils/logger"; 
 
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
+    
     if (!name || !email || !password) {
       return res
         .status(400)
         .json({ message: "Name, email, and password are required." });
     }
+
     // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(409).json({ message: "Email already in use." });
     }
+
     // Hash password
+    // bcryptjs is slower but pure JS, so it works on all environments
     const hashedPassword = await bcrypt.hash(password, 10);
+
     // Create user
     const user = new User({ name, email, password: hashedPassword });
     await user.save();
+
     // Respond
     res.status(201).json({
       user: {
@@ -33,8 +39,8 @@ export const register = async (req: Request, res: Response) => {
       message: "User registered successfully.",
     });
   } catch (error) {
-    console.error("🔥 Registration failed:", error);  // log to terminal immediately
-    logger.error("Error creating user:", error);      // log via winston to file/console
+    console.error("🔥 Registration failed:", error);  
+    logger.error("Error creating user:", error);      
     res.status(500).json({
       message: "Server error",
       error: error instanceof Error ? error.message : "Unknown error",
